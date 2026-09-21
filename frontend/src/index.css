@@ -1,0 +1,262 @@
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+  html {
+    scroll-behavior: smooth;
+    overflow-x: hidden;
+  }
+  body {
+    @apply bg-[#fffdf9] text-zinc-900 antialiased overflow-x-hidden;
+    font-family: "Manrope", "Segoe UI", sans-serif;
+  }
+  img,
+  video,
+  canvas,
+  svg {
+    max-width: 100%;
+  }
+  input,
+  select,
+  textarea,
+  button {
+    max-width: 100%;
+  }
+  h1,
+  h2,
+  h3 {
+    font-family: "Playfair Display", Georgia, serif;
+  }
+}
+
+@layer utilities {
+  .text-brand-gradient {
+    @apply bg-gradient-to-r from-brand-700 to-brand-400 bg-clip-text text-transparent;
+  }
+  .luxury-shadow {
+    @apply shadow-[0_20px_50px_rgba(0,0,0,0.05)] border-stone-100;
+  }
+  .glass {
+    @apply bg-white/70 backdrop-blur-xl border border-white/20;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .home-page {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+  }
+
+  .home-page > section {
+    position: relative;
+    z-index: 1;
+  }
+
+  .home-animated-bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+      repeating-linear-gradient(
+        115deg,
+        rgba(124, 45, 18, 0.05) 0,
+        rgba(124, 45, 18, 0.05) 1px,
+        transparent 1px,
+        transparent 44px
+      ),
+      repeating-linear-gradient(
+        25deg,
+        rgba(180, 83, 9, 0.04) 0,
+        rgba(180, 83, 9, 0.04) 1px,
+        transparent 1px,
+        transparent 62px
+      ),
+      linear-gradient(180deg, rgba(255, 253, 249, 0.94), rgba(255, 253, 249, 0.98));
+    background-size: 220px 220px, 260px 260px, 100% 100%;
+    animation: homeWeaveDrift 18s linear infinite;
+  }
+
+  .home-animated-bg::before,
+  .home-animated-bg::after {
+    content: "";
+    position: absolute;
+    inset: -20%;
+    opacity: 0.55;
+  }
+
+  .home-animated-bg::before {
+    background:
+      repeating-linear-gradient(
+        90deg,
+        transparent 0,
+        transparent 86px,
+        rgba(234, 179, 8, 0.08) 87px,
+        transparent 89px
+      );
+    animation: homeThreadSlide 24s ease-in-out infinite alternate;
+  }
+
+  .home-animated-bg::after {
+    background:
+      repeating-linear-gradient(
+        0deg,
+        transparent 0,
+        transparent 120px,
+        rgba(68, 64, 60, 0.035) 121px,
+        transparent 123px
+      );
+    animation: homeThreadFloat 28s ease-in-out infinite alternate;
+  }
+}
+
+@keyframes homeWeaveDrift {
+  from {
+    background-position: 0 0, 0 0, 0 0;
+  }
+  to {
+    background-position: 220px 220px, -260px 260px, 0 0;
+  }
+}
+
+@keyframes homeThreadSlide {
+  from {
+    transform: translateX(-2rem);
+  }
+  to {
+    transform: translateX(2rem);
+  }
+}
+
+@keyframes homeThreadFloat {
+  from {
+    transform: translateY(-1.5rem);
+  }
+  to {
+    transform: translateY(1.5rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-animated-bg,
+  .home-animated-bg::before,
+  .home-animated-bg::after {
+    animation: none;
+  }
+}
+
+@layer components {
+  .navbar-base {
+    @apply fixed top-0 left-0 right-0 z-[100] bg-white border-b border-stone-100 shadow-sm transition-all;
+  }
+  /* On desktop or when backdrop-blur is supported, add transparency */
+  @supports (backdrop-filter: blur(0px)) {
+    .navbar-base {
+      @apply bg-white/80 backdrop-blur-2xl;
+    }
+  }
+  
+  .mobile-overlay {
+    @apply fixed inset-0 bg-stone-900/60 z-[110] backdrop-blur-sm;
+  }
+  .mobile-drawer {
+    @apply fixed right-0 top-0 h-full w-[85%] max-w-sm bg-white shadow-2xl z-[150] flex flex-col transition-transform duration-500 ease-in-out;
+  }
+  .filter-drawer {
+    @apply fixed left-0 top-0 h-full w-[85%] max-w-sm bg-white shadow-2xl z-[150] flex flex-col transition-transform duration-500 ease-in-out;
+  }
+  .drawer-overlay {
+    @apply fixed inset-0 bg-stone-900/60 z-[140] backdrop-blur-sm transition-opacity duration-500;
+  }
+  .nav-link {
+    @apply flex items-center min-h-[4.5rem] px-8 py-4 text-sm font-black uppercase tracking-[0.2em] text-stone-900 hover:text-brand-700 hover:bg-stone-50 border-b border-stone-50 last:border-b-0 active:bg-stone-100 transition-all;
+  }
+  .btn-primary {
+    @apply flex items-center justify-center gap-2 rounded-2xl bg-stone-900 px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-white transition-all hover:bg-stone-800 active:scale-95 shadow-xl shadow-stone-200/50 disabled:opacity-50;
+  }
+  .btn-secondary {
+    @apply flex items-center justify-center gap-2 rounded-2xl bg-white border border-stone-200 px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-stone-900 transition-all hover:bg-stone-50 active:scale-95 disabled:opacity-50;
+  }
+  .hamburger {
+    @apply flex flex-col items-center justify-center gap-1.5 w-12 h-12 p-3 text-stone-900 hover:bg-stone-50 rounded-full transition-all;
+  }
+  .hamburger-line {
+    @apply block h-0.5 w-6 bg-current transition-all duration-300;
+  }
+
+  .table-scroll {
+    @apply max-w-full overflow-x-auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-stone-50;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-stone-200 rounded-full;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-stone-300;
+}
+
+/* Reflective/shimmer effect for hero heading */
+.shine-text {
+  background: linear-gradient(90deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.6) 25%, rgba(255,255,255,0.95) 50%, rgba(255,255,255,0.3) 75%, rgba(255,255,255,0.95) 100%), linear-gradient(90deg, #fff 0%, #fff 100%);
+  background-size: 200% 100%, 100% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 6px 30px rgba(0,0,0,0.45);
+  animation: shineMove 3.2s linear infinite;
+}
+
+@keyframes shineMove {
+  0% { background-position: 0% 50%, 0 0; }
+  50% { background-position: 100% 50%, 0 0; }
+  100% { background-position: 0% 50%, 0 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shine-text { animation: none; }
+}
+
+/* Hero subtitle typography */
+.hero-subtitle {
+  font-family: "Playfair Display", Georgia, serif;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.02;
+}
+.hero-subtitle p {
+  margin: 0;
+}
+
+@media (min-width: 768px) {
+  .hero-subtitle { line-height: 1.04; }
+}
+
+@media (min-width: 1024px) {
+  .hero-subtitle { line-height: 1.02; }
+}

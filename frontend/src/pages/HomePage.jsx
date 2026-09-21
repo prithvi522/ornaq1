@@ -1,0 +1,410 @@
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import ProductCard from "../components/ProductCard";
+import ProductModal from "../components/ProductModal";
+import api from "../services/api";
+
+import heroBanner from "../assets/hero-banner.png";
+import logoGold from "../assets/logo-gold.jpeg";
+import { JEWELLERY_CATEGORY } from "../utils/catalog";
+import { getHomeCategories } from "../utils/homeCategories";
+import { PRIMARY_POLICY_SLUGS, getPolicyPath } from "../utils/policyPages";
+
+
+export default function HomePage() {
+
+  const [categories, setCategories] = useState([]);
+  const defaultHomeFeed = {
+    newArrivals: [],
+    trending: [],
+    recommended: [],
+    jewellerySpotlight: [],
+    stories: []
+  };
+  
+  const JEWELLERY_CATEGORY = "Jewellery";
+  const [homeFeed, setHomeFeed] = useState(defaultHomeFeed);
+  const [policies, setPolicies] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  // const [categories, setCategories] = useState([]);
+  // const [brandPillars, setBrandPillars] = useState([]); //
+
+  useEffect(() => {
+    Promise.all([api.get("/products/home-feed"), api.get("/policies")])
+      .then(([homeFeedResponse, policyResponse]) => {
+        setHomeFeed({ ...defaultHomeFeed, ...homeFeedResponse.data });
+        setPolicies(policyResponse.data || []);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+
+  }, []);
+
+  useEffect(() => {
+    // 1. Get your baseline 5 static categories
+    const localPresets = getHomeCategories();
+
+    // 2. Fetch live products from backend to extract any dynamic categories
+    api.get("/products")
+      .then((response) => {
+        const products = Array.isArray(response.data) ? response.data : response.data.products || [];
+        const merged = [...localPresets];
+
+        products.forEach((product) => {
+          if (!product.category) return;
+
+          const nameString = product.category.trim();
+          
+          // Don't duplicate if it already exists in the presets array
+          const exists = merged.some(c => c.name.toLowerCase() === nameString.toLowerCase());
+
+          // Resolve dynamic cover image or fallback to the product's first uploaded image asset
+          let coverImg = product.categoryCover || "";
+          
+          if (!coverImg && product.images && product.images.length > 0) {
+            const firstImg = product.images[0];
+            coverImg = typeof firstImg === "object" ? firstImg.url : firstImg;
+          }
+
+          // Absolute fallback if everything is empty
+          if (!coverImg) {
+            coverImg = "https://images.unsplash.com/photo-1610030469983-98e550d6193c?q=80&w=600&auto=format&fit=crop";
+          }
+
+          if (!exists) {
+            // Push newly registered custom category entries right into your layout array
+            merged.push({
+              name: nameString,
+              slug: nameString,
+              img: coverImg,
+              isCustom: true
+            });
+          } else if (product.categoryCover) {
+            // Update a preset thumbnail if a custom cover was explicitly uploaded
+            const idx = merged.findIndex(c => c.name.toLowerCase() === nameString.toLowerCase());
+            if (idx !== -1) {
+              merged[idx].img = coverImg;
+            }
+          }
+        });
+
+        setCategories(merged);
+      })
+      .catch((err) => {
+        console.error("Failed to merge custom home feed categories:", err);
+        setCategories(localPresets); // Graceful baseline array fallback
+      });
+  }, []);
+
+  const handleProductClick = (product) => {
+    setSelectedProduct(product);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedProduct(null);
+  };
+
+  // const categories = getHomeCategories(homeFeed.jewellerySpotlight[0]?.images?.[0]?.url);
+  const featuredPolicies = policies
+    .filter((policy) => policy.showOnHome)
+    .sort((a, b) => {
+      const aPriority = PRIMARY_POLICY_SLUGS.indexOf(a.slug);
+      const bPriority = PRIMARY_POLICY_SLUGS.indexOf(b.slug);
+      const normalizedA = aPriority === -1 ? 999 : aPriority;
+      const normalizedB = bPriority === -1 ? 999 : bPriority;
+      return normalizedA - normalizedB || a.sortOrder - b.sortOrder;
+    });
+
+  return (
+    <div className="home-page min-h-screen bg-[#fffdf9]">
+      <div className="home-animated-bg" aria-hidden="true" />
+      {/* Hero Section - High Impact */}
+      <section className="relative h-[90vh] w-full overflow-hidden sm:h-[85vh] lg:h-[94vh]">
+        <motion.img 
+          initial={{ scale: 1.05 }}
+          animate={{ scale: 1 }}
+          transition={{ duration: 1.6, ease: "easeOut" }}
+          src={logoGold} 
+          alt="ORNAQ logo background" 
+          className="absolute inset-0 h-full w-full object-cover object-[center_10%]"
+        />
+        <div className="absolute inset-0 bg-stone-950/45" />
+        <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/25 to-transparent" />
+        
+        <div className="relative mx-auto flex h-full max-w-7xl flex-col justify-end px-6 pb-20 sm:px-8 sm:pb-28 lg:pb-32">
+          <motion.div 
+            initial={{ opacity: 0, y: 30 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            transition={{ duration: 1, delay: 0.5 }}
+            className="max-w-4xl"
+          >
+            <div className="mb-3 flex items-center gap-4 transform -translate-y-6 md:-translate-y-8">
+              <span className="h-px w-12 bg-brand-500" />
+              <span className="text-[10px] font-black uppercase tracking-[0.5em] text-brand-400 sm:text-xs">
+                Maharashtra / India
+              </span>
+            </div>
+            <div className="flex flex-col items-start gap-4">
+              <motion.h1
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0, scale: [1, 1.02, 1] }}
+                transition={{ duration: 3.5, repeat: Infinity, repeatType: "loop", ease: "easeInOut" }}
+                className="shine-text text-5xl font-black leading-[1] tracking-tight text-white sm:text-6xl md:text-7xl lg:text-8xl"
+              >
+                Wear Your Story
+              </motion.h1>
+
+              <div className="mt-6 max-w-2xl hero-subtitle text-stone-200">
+                <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl">The Ultimate Women's sarees and jewellery Collection, rooted in Maharashtra and delivered across India.</p>
+              </div>
+            </div>
+            <div className="mt-12 flex flex-col gap-4 sm:flex-row sm:gap-6">
+              <Link to="/shop" className="btn-primary px-12 py-6 text-sm shadow-2xl">
+                Shop Collection
+              </Link>
+              <Link to="/shop?isNewArrival=true" className="flex items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/5 px-12 py-6 text-sm font-black uppercase tracking-widest text-white backdrop-blur-xl transition-all hover:bg-white/10 active:scale-95">
+                New Arrivals
+              </Link>
+            </div>
+            {/* Removed small info cards per design request */}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Category Anthology */}
+      <section id="collection-categories" className="mx-auto mt-24 max-w-7xl px-6 sm:mt-32 sm:px-8">
+        <div className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-end">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-700">ORNAQ Edit</p>
+            <h2 className="mt-3 text-4xl font-black tracking-tighter text-stone-900 sm:text-6xl">Stories in Silk</h2>
+          </div>
+          <Link to="/categories" className="group flex items-center gap-3 text-xs font-black uppercase tracking-widest text-brand-700 transition-colors hover:text-brand-800">
+            View All Categories
+            <svg className="h-4 w-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+            </svg>
+          </Link>
+        </div>
+        <div className="mt-12 grid grid-cols-2 gap-4 sm:mt-16 sm:gap-8 lg:grid-cols-5">
+          {categories.map((category, i) => (
+            <motion.div
+              key={category.name}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.1 }}
+              className="group relative aspect-[4/5] overflow-hidden rounded-[2.5rem] bg-stone-100 shadow-2xl shadow-stone-200/50"
+            >
+              <Link to={`/shop?category=${encodeURIComponent(category.slug)}`} className="block h-full w-full">
+                <img 
+                  src={category.img} 
+                  alt={category.name} 
+                  className="h-full w-full object-cover transition-transform duration-1000 group-hover:scale-110" 
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-stone-900/80 via-stone-900/20 to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
+                <div className="absolute inset-0 flex flex-col justify-end p-8">
+                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-400 mb-1 opacity-0 group-hover:opacity-100 transition-opacity">Discover</p>
+                   <p className="text-xl font-black uppercase tracking-tighter text-white sm:text-2xl">{category.name}</p>
+                </div>
+              </Link>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      <section className="mx-auto mt-24 max-w-7xl px-6 sm:mt-32 sm:px-8">
+        <div className="overflow-hidden rounded-[3rem] bg-[radial-gradient(circle_at_top_left,_rgba(252,211,77,0.22),_transparent_32%),linear-gradient(135deg,_#1f1712,_#3a2419_50%,_#6a3a20)] px-8 py-12 text-white shadow-2xl shadow-amber-200/40 sm:px-12 sm:py-16">
+          <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-2xl">
+              <p className="text-[10px] font-black uppercase tracking-[0.45em] text-amber-300">Jewellery Edit</p>
+              <h2 className="mt-4 text-4xl font-black tracking-tight sm:text-6xl">Jewellery Spotlight</h2>
+              <p className="mt-5 text-sm font-medium leading-relaxed text-stone-200 sm:text-base">
+                Discover necklaces, earrings, bangles, and festive finishing pieces that bring shimmer, grace, and personality to every look.
+              </p>
+            </div>
+            <div className="flex flex-col gap-4 sm:flex-row">
+              <Link
+                to={`/shop?category=${encodeURIComponent(JEWELLERY_CATEGORY)}`}
+                className="inline-flex items-center justify-center rounded-2xl bg-white px-8 py-4 text-xs font-black uppercase tracking-[0.25em] text-stone-900 transition-all hover:bg-amber-50"
+              >
+                Explore Jewellery
+              </Link>
+              <Link
+                to="/shop"
+                className="inline-flex items-center justify-center rounded-2xl border border-white/20 bg-white/10 px-8 py-4 text-xs font-black uppercase tracking-[0.25em] text-white transition-all hover:bg-white/15"
+              >
+                Browse Full Catalog
+              </Link>
+            </div>
+          </div>
+
+          <div className="mt-12 grid gap-6 md:grid-cols-3">
+            {(loading ? Array.from({ length: 3 }) : homeFeed.jewellerySpotlight.slice(0, 3)).map((product, index) =>
+              loading ? (
+                <div key={index} className="aspect-[4/5] animate-pulse rounded-[2.5rem] bg-white/10" />
+              ) : (
+                <ProductCard key={product._id} product={product} onCardClick={handleProductClick} />
+              )
+            )}
+          </div>
+
+          {!loading && homeFeed.jewellerySpotlight.length === 0 && (
+            <div className="mt-10 rounded-[2rem] border border-white/10 bg-white/5 px-6 py-8 text-center">
+              <p className="text-sm font-semibold text-stone-200">
+                This showcase is ready for the first jewellery drop from the catalog.
+              </p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Fresh Selection */}
+      <section className="mx-auto mt-32 max-w-7xl px-6 sm:mt-48 sm:px-8">
+        <div className="text-center">
+          <p className="text-[10px] font-black uppercase tracking-[0.5em] text-brand-700">Freshly Added</p>
+          <h2 className="mt-4 text-4xl font-black tracking-tighter text-stone-900 sm:text-6xl">New Arrivals</h2>
+          <p className="mx-auto mt-6 max-w-xl text-sm font-medium text-stone-500 sm:text-base">Fresh additions for weddings, festive dressing, gifting, and everyday grace.</p>
+        </div>
+        <div className="mt-16 grid gap-6 grid-cols-2 sm:mt-20 sm:grid-cols-2 lg:grid-cols-4 lg:gap-10">
+          {loading ? (
+             Array.from({ length: 4 }).map((_, i) => (
+               <div key={i} className="aspect-[3/4] animate-pulse rounded-[2.5rem] bg-stone-50 border border-stone-100" />
+             ))
+          ) : (
+            homeFeed.newArrivals.map((product) => <ProductCard key={product._id} product={product} onCardClick={handleProductClick} />)
+          )}
+        </div>
+      </section>
+
+      {/* Trending Narrative */}
+      <section className="mt-32 bg-stone-900 py-24 text-white sm:mt-48 sm:py-40">
+        <div className="mx-auto max-w-7xl px-6 sm:px-8">
+          <div className="mb-16 flex flex-col gap-8 sm:mb-24 sm:flex-row sm:items-end sm:justify-between">
+            <div className="space-y-4">
+              <p className="text-[10px] font-black uppercase tracking-[0.5em] text-brand-500">Editorial Notes</p>
+              <h2 className="text-4xl font-black tracking-tighter sm:text-7xl">Trending Stories</h2>
+              <p className="max-w-md text-sm font-medium text-stone-400 sm:text-base">Fresh styling notes, occasion guides, and brand stories curated by the ORNAQ team.</p>
+            </div>
+            <Link to="/shop" className="btn-secondary border-stone-700 bg-transparent text-white hover:bg-stone-800 px-10">Explore Collection</Link>
+          </div>
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-10">
+            {loading ? (
+               Array.from({ length: 4 }).map((_, i) => (
+                 <div key={i} className="aspect-[4/5] animate-pulse rounded-[2.5rem] bg-stone-800" />
+               ))
+            ) : homeFeed.stories.length ? (
+              homeFeed.stories.map((story) => (
+                <article key={story._id} className="group overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.04]">
+                  <div className="aspect-[4/5] overflow-hidden bg-stone-800">
+                    {story.imageUrl ? (
+                      <img src={story.imageUrl} alt={story.title} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                    ) : (
+                      <div className="flex h-full items-center justify-center bg-stone-800 px-6 text-center text-xs font-black uppercase tracking-[0.3em] text-stone-500">
+                        ORNAQ Story
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-6">
+                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-400">{story.author || "ORNAQ"}</p>
+                    <h3 className="mt-3 text-xl font-black leading-tight text-white">{story.title}</h3>
+                    <p className="mt-4 line-clamp-3 text-sm font-medium leading-relaxed text-stone-400">{story.excerpt}</p>
+                    {story.ctaUrl && (
+                      story.ctaUrl.startsWith("http") ? (
+                        <a href={story.ctaUrl} className="mt-6 inline-flex text-[10px] font-black uppercase tracking-[0.25em] text-brand-300 hover:text-white">
+                          {story.ctaLabel || "Read Story"}
+                        </a>
+                      ) : (
+                        <Link to={story.ctaUrl} className="mt-6 inline-flex text-[10px] font-black uppercase tracking-[0.25em] text-brand-300 hover:text-white">
+                          {story.ctaLabel || "Read Story"}
+                        </Link>
+                      )
+                    )}
+                  </div>
+                </article>
+              ))
+            ) : (
+              <div className="col-span-full rounded-[2rem] border border-white/10 bg-white/[0.04] px-6 py-12 text-center">
+                <p className="text-sm font-semibold text-stone-300">Stories added by admin will appear here.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto mt-32 max-w-7xl px-6 sm:mt-48 sm:px-8">
+        <div className="rounded-[3rem] border border-stone-100 bg-white p-8 shadow-2xl shadow-stone-200/50 sm:p-12">
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-700">Store Policies</p>
+              <h2 className="mt-3 text-3xl font-black tracking-tight text-stone-900 sm:text-5xl">
+                Clear rules, transparent shopping.
+              </h2>
+            </div>
+            <p className="max-w-xl text-sm font-medium leading-relaxed text-stone-500 sm:text-base">
+              Review privacy, terms, refund guidance, and any new rules published by the ORNAQ admin team before placing an order.
+            </p>
+          </div>
+
+          <div className="mt-10 grid gap-5 lg:grid-cols-3">
+            {featuredPolicies.map((policy) => (
+              <Link
+                key={policy._id}
+                to={getPolicyPath(policy.slug)}
+                className="group rounded-[2rem] border border-stone-100 bg-stone-50/70 p-6 transition-all hover:-translate-y-1 hover:border-brand-200 hover:bg-white hover:shadow-xl hover:shadow-stone-200/50"
+              >
+                <p className="text-[10px] font-black uppercase tracking-[0.35em] text-brand-700">{policy.eyebrow || "Policy"}</p>
+                <h3 className="mt-4 text-2xl font-black text-stone-900">{policy.title}</h3>
+                <p className="mt-4 text-sm font-medium leading-relaxed text-stone-500">
+                  {policy.summary}
+                </p>
+                <div className="mt-6 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-brand-700">
+                  Read rule
+                  <svg className="h-4 w-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                  </svg>
+                </div>
+              </Link>
+            ))}
+          </div>
+
+          {!loading && featuredPolicies.length === 0 && (
+            <div className="mt-10 rounded-[2rem] border border-dashed border-stone-200 bg-stone-50 px-6 py-8 text-center">
+              <p className="text-sm font-semibold text-stone-500">
+                Policy cards will appear here when the admin enables them for the homepage.
+              </p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Intelligence Section */}
+      <section className="mx-auto mt-16 max-w-6xl px-6 pb-32 sm:px-8">
+        <div className="grid gap-12 rounded-[4rem] border border-stone-100 bg-white p-12 shadow-2xl shadow-stone-200/50 md:grid-cols-3 md:gap-16 md:p-20">
+          {[
+            { title: "FREE SHIPPING ALL OVER INDIA", desc: "Enjoy free shipping on every ORNAQ order across India.", label: "Shipping" },
+            { title: "AMAZING CUSTOMER SERVICE", desc: "Need help ? Call 9822937198. EVERY CUSTOMER IS LIKE OUR FAMILY.", label: "Support" },
+            { title: "TRUSTED PAYMENTS", desc: "Secure payments via UPI, cards and net banking accepted.", label: "Payments" }
+          ].map((item) => (
+            <div key={item.title} className="text-center">
+              <p className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-700">{item.label}</p>
+              <h3 className="mt-6 text-xl font-black text-stone-900 sm:text-2xl">{item.title}</h3>
+              <p className="mt-4 text-sm font-medium leading-relaxed text-stone-500">{item.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Product Modal */}
+      <ProductModal 
+        product={selectedProduct} 
+        open={isModalOpen} 
+        onClose={closeModal} 
+      />
+    </div>
+  );
+}

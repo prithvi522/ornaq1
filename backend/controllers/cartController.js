@@ -1,0 +1,104 @@
+import Cart from "../models/Cart.js";
+import Product from "../models/Product.js";
+import { getEffectivePrice } from "../utils/productUtils.js";
+
+const populateCart = (query) => query.populate("items.product");
+
+const serializeCart = (cart) => {
+  const items = (cart?.items || [])
+    .filter((item) => item.product)
+    .map((item) => ({
+      ...item.toObject?.(),
+      selectedColor: item.selectedColor || item.product?.color || "",
+      selectedSize: item.selectedSize || item.size || "",
+      size: item.selectedSize || item.size || "",
+      lineTotal: getEffectivePrice(item.product) * Number(item.qty || 0)
+    }));
+
+  const subtotal = items.reduce((sum, item) => sum + item.lineTotal, 0);
+  const totalQuantity = items.reduce((sum, item) => sum + Number(item.qty || 0), 0);
+
+  return {
+    user: cart?.user,
+    items,
+    subtotal,
+    totalQuantity
+  };
+};
+
+const findItem = (cart, productId, selectedColor, selectedSize = "") =>
+  cart.items.find(
+    (item) =>
+      item.product.toString() === productId &&
+      String(item.selectedColor || "") === String(selectedColor || "") &&
+      String(item.selectedSize || item.size || "") === String(selectedSize || "")
+  );
+
+export const getCart = async (req, res) => {
+  const cart = await populateCart(Cart.findOne({ user: req.user._id }));
+  res.json(serializeCart(cart) || { user: req.user._id, items: [], subtotal: 0, totalQuantity: 0 });
+};
+
+export const upsertCartItem = async (req, res) => {
+  const { productId, qty = 1, selectedColor = "", selectedSize = "", size = "" } = req.body;
+  const normalizedSize = String(selectedSize || size || "").trim();
+  const normalizedQty = Math.max(1, Number(qty || 1));
+
+  const product = await Product.findById(productId);
+  if (!product) {
+    return res.status(404).json({ message: "Product not found" });
+  }
+
+  const isSizeReq = Boolean(product.sizeApplicable ?? (Array.isArray(product.sizes) && product.sizes.length > 0));
+  if (isSizeReq) {
+    if (!normalizedSize) {
+      return res.status(400).json({ message: "Please select a size." });
+    }
+    if (Array.isArray(product.sizes) && product.sizes.length > 0 && !product.sizes.includes(normalizedSize)) {
+      return res.status(400).json({ message: `Size ${normalizedSize} is not available for this product.` });
+    }
+  }
+
+  let cart = await Cart.findOne({ user: req.user._id });
+  if (!cart) cart = await Cart.create({ user: req.user._id, items: [] });
+
+  const item = findItem(cart, productId, selectedColor, normalizedSize);
+  const previousQty = item?.qty || 0;
+  if (item) {
+    item.qty = normalizedQty;
+    item.selectedSize = normalizedSize;
+  } else {
+    cart.items.push({ product: productId, qty: normalizedQty, selectedColor, selectedSize: normalizedSize });
+  }
+
+  await cart.save();
+  await Product.findByIdAndUpdate(productId, {
+    $inc: { "analytics.cartAdds": Math.max(1, normalizedQty - previousQty) }
+  });
+
+  const populated = await populateCart(Cart.findOne({ user: req.user._id }));
+  res.json(serializeCart(populated));
+};
+
+export const removeCartItem = async (req, res) => {
+  const cart = await Cart.findOne({ user: req.user._id });
+  if (!cart) return res.status(204).send();
+  const selectedColor = req.query.color || req.body?.selectedColor || "";
+  const selectedSize = req.query.size || req.query.selectedSize || req.body?.selectedSize || req.body?.size || "";
+  cart.items = cart.items.filter(
+    (item) =>
+      !(
+        item.product.toString() === req.params.productId &&
+        String(item.selectedColor || "") === String(selectedColor) &&
+        (selectedSize ? String(item.selectedSize || item.size || "") === String(selectedSize) : true)
+      )
+  );
+  await cart.save();
+  const populated = await populateCart(Cart.findOne({ user: req.user._id }));
+  res.json(serializeCart(populated));
+};
+
+export const clearCart = async (req, res) => {
+  await Cart.findOneAndUpdate({ user: req.user._id }, { $set: { items: [] } }, { new: true });
+  res.status(204).send();
+};

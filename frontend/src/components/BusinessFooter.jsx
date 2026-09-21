@@ -1,0 +1,137 @@
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import api from "../services/api";
+import { businessProfile } from "../utils/businessProfile";
+import { getPolicyPath } from "../utils/policyPages";
+
+export default function BusinessFooter() {
+  const [policies, setPolicies] = useState([]);
+
+  useEffect(() => {
+    api.get("/policies").then((response) => setPolicies(response.data)).catch(() => {});
+  }, []);
+
+  const legalLinks = useMemo(
+    () => [
+      { label: "Contact", path: "/contact" },
+      ...policies
+        .filter((policy) => policy.showInFooter)
+        .map((policy) => ({
+          label: policy.footerLabel || policy.title,
+          path: getPolicyPath(policy.slug)
+        }))
+    ],
+    [policies]
+  );
+
+  return (
+    <footer className="relative z-10 bg-stone-900 pt-24 pb-12 text-white">
+      <div className="mx-auto max-w-7xl px-6 sm:px-8">
+        <div className="grid gap-16 border-b border-stone-800 pb-20 lg:grid-cols-12">
+          <div className="lg:col-span-4">
+            <div className="flex items-center gap-3">
+              <span className="h-px w-8 bg-brand-500" />
+              <p className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-400">Est. 2026</p>
+            </div>
+            <h3 className="mt-6 text-3xl font-black tracking-tighter sm:text-4xl">{businessProfile.brandName}</h3>
+            <p className="mt-2 text-xs font-bold uppercase tracking-widest text-stone-500">{businessProfile.marathiName}</p>
+            <p className="mt-6 text-sm font-medium leading-relaxed text-stone-400">
+              {businessProfile.businessDescription}
+            </p>
+            <div className="mt-10 flex flex-wrap gap-4">
+              {Object.entries(businessProfile.socials).map(([platform, url]) => (
+                <a
+                  key={platform}
+                  href={url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-full border border-stone-800 p-3 transition-colors hover:border-brand-500 hover:text-brand-400"
+                  aria-label={platform}
+                >
+                  <span className="text-[10px] font-black uppercase tracking-widest">{platform.charAt(0)}</span>
+                </a>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid min-w-0 gap-8 sm:grid-cols-2 lg:col-span-5">
+            <div className="min-w-0 space-y-6">
+              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-stone-500">Curations</p>
+              <nav className="flex flex-col gap-4 text-sm font-bold">
+                <Link to="/shop" className="hover:text-brand-400 transition-colors">Collection</Link>
+                <Link to="/shop?isNewArrival=true" className="hover:text-brand-400 transition-colors">New Arrivals</Link>
+                <Link to="/wishlist" className="hover:text-brand-400 transition-colors">Wishlist</Link>
+                <Link to="/cart" className="hover:text-brand-400 transition-colors">My Cart</Link>
+              </nav>
+            </div>
+            <div className="min-w-0 space-y-6">
+              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-stone-500">Legal Portfolio</p>
+                <nav className="flex min-w-0 flex-col gap-4 text-xs font-bold uppercase tracking-widest text-stone-400">
+                {legalLinks.map((link) => (
+                  <Link key={link.path} to={link.path} className="break-words hover:text-white transition-colors">
+                    {link.label}
+                  </Link>
+                ))}
+              </nav>
+            </div>
+          </div>
+
+          <div className="lg:col-span-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-stone-500 mb-6">Concierge</p>
+            <div className="space-y-6 text-sm font-medium text-stone-400">
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] font-black uppercase tracking-widest text-stone-600">Location</span>
+                <p>{businessProfile.businessAddress}</p>
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] font-black uppercase tracking-widest text-stone-600">Direct Line</span>
+                <p className="text-white font-bold">{businessProfile.phone}</p>
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] font-black uppercase tracking-widest text-stone-600">Email</span>
+                <a href={`mailto:${businessProfile.email}`} className="font-bold text-white hover:text-brand-400 transition-colors">
+                  {businessProfile.email}
+                </a>
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] font-black uppercase tracking-widest text-stone-600">Website</span>
+                <a href={businessProfile.website} target="_blank" rel="noreferrer" className="font-bold text-white hover:text-brand-400 transition-colors">
+                  www.ornaq.in
+                </a>
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] font-black uppercase tracking-widest text-stone-600">Intelligence</span>
+                <p>Managed by OrnaqTeam</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-12 flex flex-col items-center justify-between gap-6 sm:flex-row">
+          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-stone-500">
+            (c) 2026 ORNAQ. All Rights Reserved.
+          </p>
+          <div className="flex items-center gap-6">
+            <span className="text-[10px] font-black uppercase tracking-widest text-stone-600">Secure Payments</span>
+            <div className="flex gap-3 opacity-40 grayscale transition-all hover:opacity-100 hover:grayscale-0">
+              <div className="h-4 w-8 rounded bg-white/20" />
+              <div className="h-4 w-8 rounded bg-white/20" />
+              <div className="h-4 w-8 rounded bg-white/20" />
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-10 border-t border-stone-800 pt-8 text-center">
+          <p className="text-xl font-semibold text-stone-100">Copyright 2026 (c) ORNAQ</p>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-xs font-bold uppercase tracking-widest text-stone-400">
+            {legalLinks.map((link) => (
+              <Link key={link.path} to={link.path} className="transition-colors hover:text-white">
+                {link.label}
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
+}

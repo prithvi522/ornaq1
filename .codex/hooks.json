@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"e:/Ornaq_e-commerce-prachi/.codex/vexp-hint.sh\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

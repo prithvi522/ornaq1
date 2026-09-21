@@ -1,0 +1,346 @@
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { useStore } from "../context/StoreContext";
+import { useRealtime } from "../hooks/useRealtime";
+import api from "../services/api";
+import ProductCard from "../components/ProductCard";
+import ProductMediaViewer from "../components/ProductMediaViewer";
+import ReviewSection from "../components/ReviewSection";
+import SkeletonBlock from "../components/SkeletonBlock";
+import SizeGuideModal from "../components/SizeGuideModal";
+import { formatCurrency, getMarketPrice, getOfferPrice, getProductColors, getProductSizes, getProductTypeLabel, hasOfferPrice, isSizeApplicable, STANDARD_SIZES } from "../utils/catalog";
+
+export default function ProductPage() {
+  const { slug } = useParams();
+  const navigate = useNavigate();
+  const { addToCart, markViewed, recentlyViewed } = useStore();
+  const [product, setProduct] = useState(null);
+  const [discovery, setDiscovery] = useState({
+    relatedProducts: [],
+    recommendedProducts: [],
+    frequentlyBoughtTogether: []
+  });
+  const [selectedColor, setSelectedColor] = useState("");
+  const [selectedSize, setSelectedSize] = useState("");
+  const [sizeError, setSizeError] = useState("");
+  const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
+  const [checkingPincode, setCheckingPincode] = useState(false);
+  const [pincode, setPincode] = useState("");
+  const [serviceability, setServiceability] = useState(null);
+
+  useEffect(() => {
+    setProduct(null);
+    api.get(`/products/${slug}`).then((response) => {
+      setProduct(response.data);
+      setSelectedColor(response.data.color || response.data.colors?.[0] || "");
+      setSelectedSize("");
+      markViewed(response.data);
+      document.title = `${response.data.name} | Ornac`;
+      api.get(`/products/discovery/${response.data._id}`).then((related) => setDiscovery(related.data)).catch(() => {});
+    });
+  }, [slug, markViewed]);
+
+  useRealtime({
+    onStockUpdate: ({ productId, stock }) => setProduct((current) => (current && current._id === productId ? { ...current, stock } : current))
+  });
+
+  const effectivePrice = useMemo(() => getOfferPrice(product), [product]);
+  const marketPrice = useMemo(() => getMarketPrice(product), [product]);
+  const showOffer = useMemo(() => hasOfferPrice(product), [product]);
+  const productColors = useMemo(() => getProductColors(product), [product]);
+  const productSizes = useMemo(() => getProductSizes(product), [product]);
+  const productTypeLabel = useMemo(() => getProductTypeLabel(product), [product]);
+  const activeVariant = useMemo(
+    () =>
+      product?.variants?.find(
+        (variant) => String(variant.color).toLowerCase() === String(selectedColor).toLowerCase()
+      ) || null,
+    [product, selectedColor]
+  );
+  const availableStock = Number(activeVariant?.stock ?? product?.stock ?? 0);
+  const isOutOfStock = availableStock <= 0;
+  const galleryImages = useMemo(() => {
+    if (!product) return [];
+    if (activeVariant?.images?.length) return activeVariant.images;
+    return product.images || [];
+  }, [product, activeVariant]);
+
+  const recentlyViewedOthers = useMemo(
+    () => recentlyViewed.filter((item) => item.slug !== slug).slice(0, 4),
+    [recentlyViewed, slug]
+  );
+
+  const checkPincode = async () => {
+    if (!product || !pincode) return;
+    setCheckingPincode(true);
+    try {
+      const response = await api.get(`/products/${product._id}/serviceability/${pincode}`);
+      setServiceability(response.data);
+    } finally {
+      setCheckingPincode(false);
+    }
+  };
+
+  const buyNow = () => {
+    if (isOutOfStock) return;
+    if (isSizeApplicable(product) && !selectedSize) {
+      setSizeError("Please select a size.");
+      return;
+    }
+    navigate("/checkout", {
+      state: {
+        directItem: {
+          product,
+          quantity: 1,
+          selectedColor: selectedColor || product.color || product.colors?.[0] || "",
+          selectedSize: selectedSize || ""
+        }
+      }
+    });
+  };
+
+  if (!product) {
+    return (
+      <div className="mx-auto max-w-6xl px-4 py-8">
+        <div className="grid gap-8 md:grid-cols-2">
+          <SkeletonBlock className="h-[32rem] w-full" />
+          <div className="space-y-4">
+            <SkeletonBlock className="h-12 w-2/3" />
+            <SkeletonBlock className="h-24 w-full" />
+            <SkeletonBlock className="h-10 w-40" />
+            <SkeletonBlock className="h-12 w-52" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:py-10">
+      <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
+        {/* Left Column: Gallery */}
+        <ProductMediaViewer product={product} galleryImages={galleryImages} selectedColor={selectedColor} />
+
+        {/* Right Column: Info */}
+        <div className="flex flex-col pt-2 lg:pt-0">
+          <div className="mb-6 border-b border-stone-100 pb-6">
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-1">
+                <h1 className="text-2xl font-black tracking-tight text-stone-900 sm:text-4xl">{product.name}</h1>
+                <p className="text-sm font-bold uppercase tracking-widest text-brand-700">{product.classification} • {product.fabric}</p>
+              </div>
+              <div className="flex shrink-0 items-center gap-1 rounded-full bg-stone-900 px-3 py-1.5 text-white shadow-lg shadow-stone-200">
+                <span className="text-sm font-black">{Number(product.averageRating || 0).toFixed(1)}</span>
+                <svg className="h-3.5 w-3.5 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                </svg>
+              </div>
+            </div>
+
+            <div className="mt-6 flex items-baseline gap-3">
+              <p className="text-3xl font-black text-stone-900 sm:text-4xl">{formatCurrency(effectivePrice)}</p>
+              {showOffer && (
+                <div className="flex items-center gap-2">
+                  <span className="text-lg text-stone-400 line-through">{formatCurrency(marketPrice)}</span>
+                  <span className="rounded-lg bg-emerald-50 px-2 py-1 text-xs font-black text-emerald-700">Offer price</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-8">
+            <p className="text-base leading-relaxed text-stone-600 sm:text-lg">{product.description}</p>
+
+            {productColors.length > 0 && (
+              <div>
+                <p className="mb-4 text-[10px] font-black uppercase tracking-[0.2em] text-stone-400">Select {productTypeLabel} Color</p>
+                <div className="flex flex-wrap gap-3">
+                  {productColors.map((color) => (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() => setSelectedColor(color)}
+                      className={`flex min-h-[3rem] items-center gap-3 rounded-2xl border-2 px-6 py-2 transition-all active:scale-95 ${
+                        selectedColor === color 
+                          ? "border-brand-600 bg-brand-50/50 text-brand-900 shadow-md shadow-brand-100" 
+                          : "border-stone-100 bg-stone-50 text-stone-600 hover:border-stone-200"
+                      }`}
+                    >
+                      <div className="h-4 w-4 rounded-full border border-black/10 shadow-inner" style={{ backgroundColor: color.toLowerCase() }} />
+                      <span className="text-sm font-bold">{color}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {isSizeApplicable(product) && (
+              <div className={sizeError ? "rounded-3xl border-2 border-red-200 bg-red-50/40 p-4 transition-all" : ""}>
+                <div className="mb-4 flex items-center justify-between">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-stone-400">
+                    Select Size {selectedSize && <span className="font-black text-stone-900">({selectedSize})</span>}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setSizeGuideOpen(true)}
+                    className="flex items-center gap-1.5 text-xs font-bold text-brand-700 underline decoration-brand-300 underline-offset-4 hover:text-brand-900"
+                  >
+                    <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                    </svg>
+                    Size Guide
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  {(productSizes.length > 0 ? productSizes : STANDARD_SIZES).map((size) => (
+                    <button
+                      key={size}
+                      type="button"
+                      onClick={() => { setSelectedSize(size); setSizeError(""); }}
+                      className={`min-h-[3rem] min-w-[3.5rem] rounded-2xl border-2 px-5 py-2 text-sm font-bold transition-all active:scale-95 ${
+                        selectedSize === size
+                          ? "border-brand-600 bg-brand-50/50 text-brand-900 shadow-md shadow-brand-100"
+                          : "border-stone-100 bg-stone-50 text-stone-600 hover:border-stone-200"
+                      }`}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+                {sizeError && <p className="mt-3 text-xs font-bold text-red-600">{sizeError}</p>}
+              </div>
+            )}
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="rounded-3xl border border-stone-100 bg-emerald-50/30 p-6">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className={`h-2 w-2 rounded-full ${isOutOfStock ? "bg-red-500" : "bg-emerald-500 animate-pulse"}`} />
+                  <p className={`text-sm font-black uppercase tracking-wider ${isOutOfStock ? "text-red-700" : "text-emerald-800"}`}>
+                    {isOutOfStock ? "Sold Out" : "In Stock"}
+                  </p>
+                </div>
+                <p className="text-2xl font-black text-stone-900">{availableStock} <span className="text-xs font-bold text-stone-500 uppercase tracking-widest">Units left</span></p>
+              </div>
+
+              <div className="rounded-3xl border border-stone-100 bg-stone-50/50 p-6">
+                <p className="text-sm font-black text-stone-400 uppercase tracking-wider mb-2">Shipping Estimate</p>
+                <p className="text-lg font-bold text-stone-800">{product.deliveryEstimate?.minDays || 3}-{product.deliveryEstimate?.maxDays || 5} Business Days</p>
+              </div>
+            </div>
+
+            <div className="space-y-4 pt-4">
+              <button 
+                type="button" 
+                onClick={() => {
+                  if (isSizeApplicable(product) && !selectedSize) { setSizeError("Please select a size."); return; }
+                  addToCart(product, 1, selectedColor, selectedSize);
+                }}
+                disabled={isOutOfStock}
+                className="btn-primary w-full shadow-2xl py-5 text-lg"
+              >
+                {isOutOfStock ? "Sold Out" : "Add to Luxury Bag"}
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                </svg>
+              </button>
+
+              <button
+                type="button"
+                onClick={buyNow}
+                disabled={isOutOfStock}
+                className="w-full rounded-full border-2 border-stone-900 bg-white px-6 py-5 text-lg font-black text-stone-900 shadow-xl shadow-stone-100 transition-all hover:bg-stone-900 hover:text-white active:scale-95 disabled:cursor-not-allowed disabled:border-stone-200 disabled:bg-stone-100 disabled:text-stone-400 disabled:hover:bg-stone-100"
+              >
+                {isOutOfStock ? "Unavailable" : "Buy Now"}
+              </button>
+
+              {product.youtubeLink && <YouTubeVideo url={product.youtubeLink} />}
+
+              <div className="rounded-3xl bg-zinc-900 p-6 text-white shadow-2xl">
+                <p className="mb-4 text-sm font-bold tracking-tight">Check Delivery & COD Availability</p>
+                <div className="flex gap-2">
+                  <input
+                    value={pincode}
+                    onChange={(event) => setPincode(event.target.value)}
+                    placeholder="Enter delivery pincode"
+                    className="flex-1 rounded-xl bg-white/10 px-4 py-3.5 text-sm font-medium border border-white/20 outline-none focus:bg-white/20 transition-all placeholder:text-zinc-500"
+                  />
+                  <button 
+                    type="button" 
+                    onClick={checkPincode} 
+                    className="rounded-xl bg-white px-6 py-3.5 text-sm font-black text-zinc-900 transition-all hover:bg-zinc-100 active:scale-95"
+                  >
+                    {checkingPincode ? "..." : "Check"}
+                  </button>
+                </div>
+                {serviceability && (
+                  <motion.p 
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`mt-4 text-sm font-bold ${serviceability.available ? "text-emerald-400" : "text-red-400"}`}
+                  >
+                    {serviceability.message}
+                  </motion.p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <section className="mt-10">
+        <ReviewSection
+          productId={product._id}
+          ratingSummary={{ averageRating: product.averageRating, totalReviews: product.totalReviews }}
+        />
+      </section>
+
+      <section className="mt-10">
+        <h2 className="mb-4 text-xl font-semibold">Related products</h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {discovery.relatedProducts.map((item) => <ProductCard key={item._id} product={item} />)}
+        </div>
+      </section>
+
+      <section className="mt-10">
+        <h2 className="mb-4 text-xl font-semibold">Frequently bought together</h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {discovery.frequentlyBoughtTogether.map((item) => <ProductCard key={item._id} product={item} />)}
+        </div>
+      </section>
+
+      <section className="mt-10">
+        <h2 className="mb-4 text-xl font-semibold">Recommended for you</h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {discovery.recommendedProducts.map((item) => <ProductCard key={item._id} product={item} />)}
+        </div>
+      </section>
+
+      {recentlyViewedOthers.length > 0 && (
+        <section className="mt-10">
+          <h2 className="mb-4 text-xl font-semibold">Recently viewed</h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {recentlyViewedOthers.map((item) => <ProductCard key={item._id} product={item} />)}
+          </div>
+        </section>
+      )}
+
+      <SizeGuideModal open={sizeGuideOpen} onClose={() => setSizeGuideOpen(false)} />
+    </div>
+  );
+}
+
+function YouTubeVideo({ url }) {
+  const id = getYouTubeVideoId(url);
+  if (!id) return <a href={url} target="_blank" rel="noreferrer" className="text-center text-sm font-black text-brand-700 hover:text-brand-900">Watch Video</a>;
+  return <div className="overflow-hidden rounded-3xl border border-stone-100 bg-stone-50"><div className="aspect-video"><iframe className="h-full w-full" src={`https://www.youtube-nocookie.com/embed/${id}`} title="Product video" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /></div><a href={url} target="_blank" rel="noreferrer" className="block px-5 py-3 text-center text-xs font-black uppercase tracking-widest text-brand-700 hover:text-brand-900">Watch on YouTube</a></div>;
+}
+
+function getYouTubeVideoId(url) {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.replace(/^www\./, "");
+    if (host === "youtu.be") return parsed.pathname.split("/").filter(Boolean)[0] || "";
+    if (host === "youtube.com" || host === "m.youtube.com") return parsed.searchParams.get("v") || parsed.pathname.match(/^\/(?:embed|shorts)\/([^/?]+)/)?.[1] || "";
+  } catch { /* fall through to the original-link fallback */ }
+  return "";
+}
