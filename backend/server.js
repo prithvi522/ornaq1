@@ -142,7 +142,33 @@ app.use((req, _res, next) => {
 });
 
 /* routes */
-app.get("/health", (_req, res) => res.json({ ok: true }));
+app.get("/", (_req, res) =>
+  res.json({
+    status: "online",
+    message: "ORNAQ API Server is operational",
+    version: "1.0.0",
+    health: "/health",
+    api: "/api"
+  })
+);
+
+app.get("/api", (_req, res) =>
+  res.json({
+    status: "online",
+    message: "ORNAQ API Base",
+    routes: [
+      "/api/products",
+      "/api/products/home-feed",
+      "/api/policies",
+      "/api/stories",
+      "/api/auth",
+      "/api/cart",
+      "/api/orders"
+    ]
+  })
+);
+
+app.get("/health", (_req, res) => res.json({ ok: true, timestamp: new Date().toISOString() }));
 
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
