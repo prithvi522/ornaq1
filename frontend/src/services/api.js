@@ -3,9 +3,10 @@ import axios from "axios";
 const trimTrailingSlash = (value = "") => value.replace(/\/+$/, "");
 const isLocalhostUrl = (value = "") => /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(value);
 const productionApiUrl = "https://api.ornaq.in/api";
+const localApiUrl = "http://localhost:5000/api";
 
 const resolveApiBaseUrl = () => {
-  const configuredUrl = import.meta.env.VITE_API_URL;
+  const configuredUrl = import.meta.env.VITE_API_URL?.trim();
 
   if (configuredUrl) {
     const url = trimTrailingSlash(configuredUrl);
@@ -15,7 +16,7 @@ const resolveApiBaseUrl = () => {
     return url.endsWith("/api") ? url : `${url}/api`;
   }
 
-  return productionApiUrl;
+  return import.meta.env.DEV ? localApiUrl : productionApiUrl;
 };
 
 const api = axios.create({

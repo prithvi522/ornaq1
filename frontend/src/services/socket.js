@@ -7,9 +7,10 @@ const resolveAuth = () => ({
 const trimTrailingSlash = (value = "") => value.replace(/\/+$/, "");
 const isLocalhostUrl = (value = "") => /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(value);
 const productionSocketUrl = "https://api.ornaq.in";
+const localSocketUrl = "http://localhost:5000";
 
 const resolveSocketUrl = () => {
-  const configuredUrl = import.meta.env.VITE_SOCKET_URL;
+  const configuredUrl = import.meta.env.VITE_SOCKET_URL?.trim();
   if (configuredUrl) {
     const url = trimTrailingSlash(configuredUrl);
     if (import.meta.env.PROD && isLocalhostUrl(url)) {
@@ -18,9 +19,8 @@ const resolveSocketUrl = () => {
     return url;
   }
 
-  const apiUrl = import.meta.env.VITE_API_URL 
+  const apiUrl = import.meta.env.VITE_API_URL?.trim();
   if (apiUrl) {
-    // Strip trailing "/api" or "/api/" then any trailing slashes
     const url = apiUrl.replace(/\/api\/?$/, "").replace(/\/+$/, "");
     if (import.meta.env.PROD && isLocalhostUrl(url)) {
       return productionSocketUrl;
@@ -28,7 +28,7 @@ const resolveSocketUrl = () => {
     return url;
   }
 
-  return productionSocketUrl;
+  return import.meta.env.DEV ? localSocketUrl : productionSocketUrl;
 };
 
 export const socket = io(resolveSocketUrl(), {
