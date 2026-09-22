@@ -21,7 +21,7 @@ const resolveApiBaseUrl = () => {
 
 const api = axios.create({
   baseURL: resolveApiBaseUrl(),
-  timeout: 15000,
+  timeout: 60000,
   withCredentials: true
 });
 
@@ -34,7 +34,9 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (!error.response) {
+    if (error.code === "ECONNABORTED" || error.message?.includes("timeout")) {
+      error.userMessage = "Server took too long to respond. It may be starting up, please try again in a few seconds.";
+    } else if (!error.response) {
       error.userMessage = "Unable to reach the server. Please try again in a few seconds.";
     }
 

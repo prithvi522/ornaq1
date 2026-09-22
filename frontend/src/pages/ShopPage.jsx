@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import ProductCard from "../components/ProductCard";
 import ProductModal from "../components/ProductModal";
 import ShopFilters from "../components/ShopFilters";
-import api from "../services/api";
+import api, { getApiErrorMessage } from "../services/api";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import { cleanFilters, defaultShopFilters, isJewelleryCategory, JEWELLERY_CATEGORY, mergeCategories, sortOptions } from "../utils/catalog";
 
@@ -100,7 +100,7 @@ export default function ShopPage() {
       })
       .catch((err) => {
         console.error("Shop API Error:", err);
-        setError("The collection is temporarily unavailable. Our artisans are working to restore access.");
+        setError(getApiErrorMessage(err, "The collection is temporarily unavailable. Our artisans are working to restore access."));
       })
       .finally(() => setLoading(false));
   }, [searchParams]);

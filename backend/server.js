@@ -30,7 +30,8 @@ const server = http.createServer(app);
 const isProduction = process.env.NODE_ENV === "production";
 const defaultOrigins = [
   "https://ornaq.in",
-  "https://www.ornaq.in", // User provided
+  "https://www.ornaq.in",
+  "https://ornaq1.onrender.com",
   "http://localhost:4173",
   "http://localhost:5173",
   "http://localhost:5174",
@@ -54,15 +55,24 @@ const allowedOrigins = Array.from(
 );
 
 const isAllowedOrigin = (origin) => {
-  if (!origin) return true; // allow non-browser requests (curl, mobile, etc.)
+  if (!origin) return true; // allow non-browser requests (curl, mobile, server-to-server, Postman)
   const normalizedOrigin = origin.trim().replace(/\/+$/, "");
   
+  if (allowedOrigins.includes(normalizedOrigin)) {
+    return true;
+  }
+
+  // Explicitly allow any Render deployment for this project
+  if (normalizedOrigin.endsWith(".onrender.com") && normalizedOrigin.includes("ornaq")) {
+    return true;
+  }
+
   // Explicitly allow any Vercel deployment for this project
-  if (normalizedOrigin.endsWith(".vercel.app") && normalizedOrigin.includes("ornaq-frontend")) {
+  if (normalizedOrigin.endsWith(".vercel.app") && normalizedOrigin.includes("ornaq")) {
     return true;
   }
   
-  return allowedOrigins.includes(normalizedOrigin);
+  return false;
 };
 
 const buildCorsOptions = () => ({
@@ -70,7 +80,6 @@ const buildCorsOptions = () => ({
     if (isAllowedOrigin(origin)) {
       return callback(null, true);
     }
-    // Return false to block but keep it silent
     return callback(null, false);
   },
   credentials: true,
@@ -84,7 +93,9 @@ const buildCorsOptions = () => ({
     "Access-Control-Request-Method",
     "Access-Control-Request-Headers"
   ],
-  exposedHeaders: ["Set-Cookie", "Content-Disposition", "Content-Type"]
+  exposedHeaders: ["Set-Cookie", "Content-Disposition", "Content-Type"],
+  maxAge: 86400,
+  optionsSuccessStatus: 204
 });
 
 const corsOptions = buildCorsOptions();
@@ -107,14 +118,18 @@ setupSockets(io);
 app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
 
-app.use(helmet());
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" }
+  })
+);
 app.use(morgan("dev"));
 
 app.use(
   rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: isProduction ? 300 : 5000,
-    skip: () => !isProduction
+    max: isProduction ? 1500 : 5000,
+    skip: (req) => !isProduction || req.method === "OPTIONS"
   })
 );
 
