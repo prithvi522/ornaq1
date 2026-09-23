@@ -186,11 +186,30 @@ app.use("/api/stories", storyRoutes);
 app.use(notFound);
 app.use(errorHandler);
 
-/* DB connect */
-connectDB();
-
 const PORT = process.env.PORT || 5000;
 
-server.listen(PORT, () => {
-  console.log(`Server running on ${PORT}`);
+const startServer = async () => {
+  try {
+    // Do not accept requests until the database dependency is ready. Previously,
+    // a failed MongoDB connection could leave the process in an unclear state.
+    await connectDB();
+
+    server.listen(PORT, () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
+  } catch (error) {
+    console.error("Failed to start the API server:", error.message);
+    process.exit(1);
+  }
+};
+
+server.on("error", (error) => {
+  if (error.code === "EADDRINUSE") {
+    console.error(`Port ${PORT} is already in use. Stop the other server process, then try again.`);
+  } else {
+    console.error("API server error:", error);
+  }
+  process.exit(1);
 });
+
+startServer();

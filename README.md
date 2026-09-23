@@ -61,6 +61,20 @@ cd ../frontend
 npm install
 ```
 
+From the repository root, you can start both applications together:
+
+```bash
+npm run dev
+```
+
+If Windows PowerShell says that `npm.ps1` cannot be loaded because script execution
+is disabled, use the Windows command shim instead (this does not change your
+machine's execution policy):
+
+```powershell
+npm.cmd run dev
+```
+
 ## 3) Configure environment variables
 
 Create `backend/.env` from `backend/.env.example` and fill all values:
@@ -131,6 +145,8 @@ Frontend runs on `http://localhost:5173`.
 
 ## 7) Verify full local flow
 
+- Open the Vite URL printed in the terminal (normally `http://localhost:5173`)
+- Confirm `http://localhost:5000/health` returns `{"ok":true,...}` before using the store
 - Register/Login
 - Login as admin (from seeded email/password)
 - Add product from admin dashboard with image upload
