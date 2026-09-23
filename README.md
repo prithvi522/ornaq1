@@ -158,25 +158,45 @@ Frontend runs on `http://localhost:5173`.
 
 ## Deployment (Production) - Step by Step
 
-## A) MongoDB Atlas
+This repository includes [render.yaml](render.yaml), which creates both required Render services:
 
-1. Create a cluster
-2. Create database user
-3. Whitelist IPs (start with `0.0.0.0/0`, tighten later)
-4. Copy connection string into `MONGO_URI` on Render
+- `ornaq-api`: Node/Express web service (Free plan)
+- `ornaq-web`: Vite static site (Free)
 
-## B) Deploy backend on Render
+The frontend is static; the API must be a separate web service. Do not deploy the frontend as a Node web service.
 
-1. Push project to GitHub
-2. In Render, create **Web Service**
-3. Root directory: `backend`
-4. Build command: `npm install`
-5. Start command: `npm start`
-6. Add backend env vars (same as local, but production values)
-7. Set `CLIENT_URL` to your Vercel domain (example: `https://your-app.vercel.app`)
-8. Deploy and test `https://<render-url>/health`
+## A) Prepare MongoDB Atlas
 
-## C) Payment provider mode (current + future)
+1. Create an Atlas cluster and a database user.
+2. In Atlas Network Access, allow connections from Render. For an initial deploy, `0.0.0.0/0` works; restrict it later if you have Render's fixed outbound IPs on a paid plan.
+3. Copy the `mongodb+srv://...` connection string for Render's `MONGO_URI` variable.
+
+## B) Deploy both services with the Blueprint
+
+1. Commit and push this repository to GitHub.
+2. In Render, choose **New > Blueprint** and select the repository. Render detects `render.yaml` at the repository root.
+3. Enter the values requested for `sync: false` variables. Do not put secrets in Git.
+4. Create the Blueprint. Wait for `ornaq-api` to become live, then copy its URL, for example `https://ornaq-api.onrender.com`.
+5. Set these frontend variables in the `ornaq-web` service and manually deploy it again:
+
+```env
+VITE_API_URL=https://ornaq-api.onrender.com/api
+VITE_SOCKET_URL=https://ornaq-api.onrender.com
+VITE_GOOGLE_CLIENT_ID=your-google-oauth-client-id.apps.googleusercontent.com
+```
+
+6. Copy the `ornaq-web` URL, then set the API's `CLIENT_URL` to that exact URL, for example `https://ornaq-web.onrender.com`. Redeploy `ornaq-api`.
+7. Test `https://ornaq-api.onrender.com/health`, then open the frontend URL.
+
+The backend's required production variables are `MONGO_URI`, `JWT_SECRET`, `CLIENT_URL`, and the three Cloudinary values for image uploads. Configure Google OAuth, Razorpay, OTP, and email variables only for the features you enable. See [backend/.env.example](backend/.env.example) and [frontend/.env.example](frontend/.env.example) for every supported variable.
+
+For Google sign-in, add the final frontend URL as an Authorized JavaScript Origin in Google Cloud Console.
+
+## C) Free-tier behaviour
+
+Render Free web services spin down after 15 minutes without traffic. The first API request after that can take about a minute while it starts; this is expected. The frontend static site does not spin down. Store images in Cloudinary and data in MongoDB Atlas—Render's Free web-service filesystem is temporary.
+
+## D) Payment provider mode (current + future)
 
 Current mode:
 - Online checkout uses `MOCK` provider through `backend/services/payment/paymentService.js`
@@ -189,18 +209,6 @@ Future mode:
   - `backend/services/payment/stripeProvider.js`
 - No controller or frontend contract change needed, just provider implementation and env setup
 
-## D) Deploy frontend on Vercel
-
-1. In Vercel, import GitHub repo
-2. Set root directory to `frontend`
-3. Build command: `npm run build`
-4. Output directory: `dist`
-5. Add env vars:
-   - `VITE_API_URL=https://<render-url>/api`
-   - `VITE_SOCKET_URL=https://<render-url>`
-   - `VITE_RAZORPAY_KEY_ID=<your-live-or-test-key>`
-6. Deploy
-
 ## E) Post-deploy checklist
 
 - Login/Register works
@@ -211,6 +219,36 @@ Future mode:
 - Stock updates broadcast in realtime
 - `orderCreated` and `paymentStatusUpdated` socket events are received on client
 - MOCK online payment flow shows both success and failure paths
+
+## Commands
+
+Run these from the repository root after installing dependencies:
+
+```powershell
+# Install root and application dependencies (first time only)
+npm.cmd install
+npm.cmd install --prefix backend
+npm.cmd install --prefix frontend
+
+# Start API and frontend together for local development
+npm.cmd run dev
+
+# Or start either application separately
+npm.cmd run dev:backend
+npm.cmd run dev:frontend
+
+# Production build check for the frontend
+npm.cmd run build --prefix frontend
+
+# Start the production API locally
+npm.cmd run start --prefix backend
+
+# Optional database setup
+npm.cmd run seed:admin --prefix backend
+npm.cmd run seed:products --prefix backend
+```
+
+Use `npm` in Command Prompt, macOS, or Linux. `npm.cmd` avoids PowerShell's local execution-policy block on this Windows machine.
 
 ---
 
