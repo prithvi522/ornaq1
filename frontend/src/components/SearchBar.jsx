@@ -20,7 +20,11 @@ const saveRecentSearch = (value) => {
   localStorage.setItem(RECENT_SEARCH_KEY, JSON.stringify(next));
 };
 
-export default function SearchBar({ mobile = false, onNavigate = () => {} }) {
+export default function SearchBar({
+  mobile = false,
+  onNavigate = () => {},
+  placeholder = "Search silk, paithani, cotton..."
+}) {
   const navigate = useNavigate();
   const location = useLocation();
   const containerRef = useRef(null);
@@ -106,13 +110,14 @@ export default function SearchBar({ mobile = false, onNavigate = () => {} }) {
   return (
     <div ref={containerRef} className={`relative ${mobile ? "w-full" : "w-full max-w-md"}`}>
       <form onSubmit={submitSearch} className="relative">
-        <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-stone-400">Search</span>
+        <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-stone-400" aria-hidden="true">Search</span>
         <input
           type="search"
           value={query}
           onFocus={() => setIsFocused(true)}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search silk, paithani, cotton..."
+          placeholder={placeholder}
+          aria-label="Search the ORNAQ collection by product name, item code, category, or keyword"
           className={`w-full rounded-full border border-stone-200 bg-white/90 py-3 pl-20 pr-12 text-sm text-stone-800 outline-none transition focus:border-brand-300 focus:ring-4 focus:ring-brand-100 ${
             mobile ? "shadow-sm" : "shadow-sm shadow-stone-200/60"
           }`}
@@ -125,11 +130,12 @@ export default function SearchBar({ mobile = false, onNavigate = () => {} }) {
               setResults([]);
             }}
             className="absolute right-12 top-1/2 -translate-y-1/2 text-sm text-stone-400 hover:text-stone-700"
+            aria-label="Clear search"
           >
             Clear
           </button>
         )}
-        <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-brand-700 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-brand-800">
+        <button type="submit" aria-label="Search products" className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-brand-700 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-brand-800">
           Go
         </button>
       </form>

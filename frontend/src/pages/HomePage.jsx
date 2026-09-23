@@ -3,27 +3,30 @@ import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import ProductCard from "../components/ProductCard";
 import ProductModal from "../components/ProductModal";
+import SearchBar from "../components/SearchBar";
 import api from "../services/api";
 
 import heroBanner from "../assets/hero-banner.png";
 import logoGold from "../assets/logo-gold.jpeg";
-import { JEWELLERY_CATEGORY } from "../utils/catalog";
-import { getHomeCategories } from "../utils/homeCategories";
+import catSilk from "../assets/category-silk.png";
+import catWedding from "../assets/category-wedding.png";
 import { PRIMARY_POLICY_SLUGS, getPolicyPath } from "../utils/policyPages";
 
+const HOME_CATEGORIES = [
+  { name: "Sarees", searchQuery: "saree", image: catSilk, description: "Classic drapes for every celebration" },
+  { name: "Dress Materials", searchQuery: "dress material", image: catWedding, description: "Create a look that is entirely yours" },
+  { name: "Kurtis", searchQuery: "kurti", image: catSilk, description: "Effortless elegance for every day" },
+  { name: "New Arrivals", isNewArrival: true, image: catWedding, description: "The latest ORNAQ edit" }
+];
 
 export default function HomePage() {
 
-  const [categories, setCategories] = useState([]);
   const defaultHomeFeed = {
     newArrivals: [],
     trending: [],
     recommended: [],
-    jewellerySpotlight: [],
     stories: []
   };
-  
-  const JEWELLERY_CATEGORY = "Jewellery";
   const [homeFeed, setHomeFeed] = useState(defaultHomeFeed);
   const [policies, setPolicies] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -43,62 +46,6 @@ export default function HomePage() {
 
   }, []);
 
-  useEffect(() => {
-    // 1. Get your baseline 5 static categories
-    const localPresets = getHomeCategories();
-
-    // 2. Fetch live products from backend to extract any dynamic categories
-    api.get("/products")
-      .then((response) => {
-        const products = Array.isArray(response.data) ? response.data : response.data.products || [];
-        const merged = [...localPresets];
-
-        products.forEach((product) => {
-          if (!product.category) return;
-
-          const nameString = product.category.trim();
-          
-          // Don't duplicate if it already exists in the presets array
-          const exists = merged.some(c => c.name.toLowerCase() === nameString.toLowerCase());
-
-          // Resolve dynamic cover image or fallback to the product's first uploaded image asset
-          let coverImg = product.categoryCover || "";
-          
-          if (!coverImg && product.images && product.images.length > 0) {
-            const firstImg = product.images[0];
-            coverImg = typeof firstImg === "object" ? firstImg.url : firstImg;
-          }
-
-          // Absolute fallback if everything is empty
-          if (!coverImg) {
-            coverImg = "https://images.unsplash.com/photo-1610030469983-98e550d6193c?q=80&w=600&auto=format&fit=crop";
-          }
-
-          if (!exists) {
-            // Push newly registered custom category entries right into your layout array
-            merged.push({
-              name: nameString,
-              slug: nameString,
-              img: coverImg,
-              isCustom: true
-            });
-          } else if (product.categoryCover) {
-            // Update a preset thumbnail if a custom cover was explicitly uploaded
-            const idx = merged.findIndex(c => c.name.toLowerCase() === nameString.toLowerCase());
-            if (idx !== -1) {
-              merged[idx].img = coverImg;
-            }
-          }
-        });
-
-        setCategories(merged);
-      })
-      .catch((err) => {
-        console.error("Failed to merge custom home feed categories:", err);
-        setCategories(localPresets); // Graceful baseline array fallback
-      });
-  }, []);
-
   const handleProductClick = (product) => {
     setSelectedProduct(product);
     setIsModalOpen(true);
@@ -109,7 +56,6 @@ export default function HomePage() {
     setSelectedProduct(null);
   };
 
-  // const categories = getHomeCategories(homeFeed.jewellerySpotlight[0]?.images?.[0]?.url);
   const featuredPolicies = policies
     .filter((policy) => policy.showOnHome)
     .sort((a, b) => {
@@ -150,6 +96,7 @@ export default function HomePage() {
               </span>
             </div>
             <div className="flex flex-col items-start gap-4">
+              <p className="text-[11px] font-black uppercase tracking-[0.45em] text-brand-300">ORNAQ</p>
               <motion.h1
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0, scale: [1, 1.02, 1] }}
@@ -160,8 +107,11 @@ export default function HomePage() {
               </motion.h1>
 
               <div className="mt-6 max-w-2xl hero-subtitle text-stone-200">
-                <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl">The Ultimate Women's sarees and jewellery Collection, rooted in Maharashtra and delivered across India.</p>
+                <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl">A curated saree and occasionwear collection, rooted in Maharashtra and delivered across India.</p>
               </div>
+            </div>
+            <div className="mt-8 max-w-2xl">
+              <SearchBar placeholder="Search sarees, kurtis, dress materials..." />
             </div>
             <div className="mt-12 flex flex-col gap-4 sm:flex-row sm:gap-6">
               <Link to="/shop" className="btn-primary px-12 py-6 text-sm shadow-2xl">
@@ -176,12 +126,12 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Category Anthology */}
+      {/* Shop by category */}
       <section id="collection-categories" className="mx-auto mt-24 max-w-7xl px-6 sm:mt-32 sm:px-8">
         <div className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-end">
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-700">ORNAQ Edit</p>
-            <h2 className="mt-3 text-4xl font-black tracking-tighter text-stone-900 sm:text-6xl">Stories in Silk</h2>
+            <h2 className="mt-3 text-4xl font-black tracking-tighter text-stone-900 sm:text-6xl">Shop by Category</h2>
           </div>
           <Link to="/categories" className="group flex items-center gap-3 text-xs font-black uppercase tracking-widest text-brand-700 transition-colors hover:text-brand-800">
             View All Categories
@@ -190,8 +140,8 @@ export default function HomePage() {
             </svg>
           </Link>
         </div>
-        <div className="mt-12 grid grid-cols-2 gap-4 sm:mt-16 sm:gap-8 lg:grid-cols-5">
-          {categories.map((category, i) => (
+        <div className="mt-12 grid grid-cols-2 gap-4 sm:mt-16 sm:grid-cols-4 sm:gap-6 lg:gap-8">
+          {HOME_CATEGORIES.map((category, i) => (
             <motion.div
               key={category.name}
               initial={{ opacity: 0, y: 20 }}
@@ -200,66 +150,21 @@ export default function HomePage() {
               transition={{ delay: i * 0.1 }}
               className="group relative aspect-[4/5] overflow-hidden rounded-[2.5rem] bg-stone-100 shadow-2xl shadow-stone-200/50"
             >
-              <Link to={`/shop?category=${encodeURIComponent(category.slug)}`} className="block h-full w-full">
+              <Link to={category.isNewArrival ? "/shop?isNewArrival=true" : `/shop?searchQuery=${encodeURIComponent(category.searchQuery)}`} className="block h-full w-full" aria-label={`Shop ${category.name}`}>
                 <img 
-                  src={category.img} 
-                  alt={category.name} 
+                  src={category.image}
+                  alt={`${category.name} collection`}
                   className="h-full w-full object-cover transition-transform duration-1000 group-hover:scale-110" 
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-stone-900/80 via-stone-900/20 to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
                 <div className="absolute inset-0 flex flex-col justify-end p-8">
                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-400 mb-1 opacity-0 group-hover:opacity-100 transition-opacity">Discover</p>
                    <p className="text-xl font-black uppercase tracking-tighter text-white sm:text-2xl">{category.name}</p>
+                   <p className="mt-2 text-xs font-semibold text-stone-100 opacity-0 transition-opacity group-hover:opacity-100">{category.description}</p>
                 </div>
               </Link>
             </motion.div>
           ))}
-        </div>
-      </section>
-
-      <section className="mx-auto mt-24 max-w-7xl px-6 sm:mt-32 sm:px-8">
-        <div className="overflow-hidden rounded-[3rem] bg-[radial-gradient(circle_at_top_left,_rgba(252,211,77,0.22),_transparent_32%),linear-gradient(135deg,_#1f1712,_#3a2419_50%,_#6a3a20)] px-8 py-12 text-white shadow-2xl shadow-amber-200/40 sm:px-12 sm:py-16">
-          <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-2xl">
-              <p className="text-[10px] font-black uppercase tracking-[0.45em] text-amber-300">Jewellery Edit</p>
-              <h2 className="mt-4 text-4xl font-black tracking-tight sm:text-6xl">Jewellery Spotlight</h2>
-              <p className="mt-5 text-sm font-medium leading-relaxed text-stone-200 sm:text-base">
-                Discover necklaces, earrings, bangles, and festive finishing pieces that bring shimmer, grace, and personality to every look.
-              </p>
-            </div>
-            <div className="flex flex-col gap-4 sm:flex-row">
-              <Link
-                to={`/shop?category=${encodeURIComponent(JEWELLERY_CATEGORY)}`}
-                className="inline-flex items-center justify-center rounded-2xl bg-white px-8 py-4 text-xs font-black uppercase tracking-[0.25em] text-stone-900 transition-all hover:bg-amber-50"
-              >
-                Explore Jewellery
-              </Link>
-              <Link
-                to="/shop"
-                className="inline-flex items-center justify-center rounded-2xl border border-white/20 bg-white/10 px-8 py-4 text-xs font-black uppercase tracking-[0.25em] text-white transition-all hover:bg-white/15"
-              >
-                Browse Full Catalog
-              </Link>
-            </div>
-          </div>
-
-          <div className="mt-12 grid gap-6 md:grid-cols-3">
-            {(loading ? Array.from({ length: 3 }) : homeFeed.jewellerySpotlight.slice(0, 3)).map((product, index) =>
-              loading ? (
-                <div key={index} className="aspect-[4/5] animate-pulse rounded-[2.5rem] bg-white/10" />
-              ) : (
-                <ProductCard key={product._id} product={product} onCardClick={handleProductClick} />
-              )
-            )}
-          </div>
-
-          {!loading && homeFeed.jewellerySpotlight.length === 0 && (
-            <div className="mt-10 rounded-[2rem] border border-white/10 bg-white/5 px-6 py-8 text-center">
-              <p className="text-sm font-semibold text-stone-200">
-                This showcase is ready for the first jewellery drop from the catalog.
-              </p>
-            </div>
-          )}
         </div>
       </section>
 

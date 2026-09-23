@@ -4,7 +4,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useStore } from "../context/StoreContext";
 import { useAuth } from "../context/AuthContext";
 import logoGold from "../assets/logo-gold.jpeg";
-import { JEWELLERY_CATEGORY } from "../utils/catalog";
 
 function BrandLogo({ compact = false }) {
   return (
@@ -82,13 +81,7 @@ export default function Navbar() {
     logout(navigate, "/login");
   };
 
-  const isJewelleryView =
-    location.pathname === "/shop" &&
-    new URLSearchParams(location.search).get("category") ===
-      JEWELLERY_CATEGORY;
-
-  const isShopView =
-    location.pathname === "/shop" && !isJewelleryView;
+  const isShopView = location.pathname === "/shop";
 
   const getUserInitial = () => {
     if (!user?.name) return "U";
@@ -156,20 +149,6 @@ export default function Navbar() {
               }`}
             >
               Shop
-            </Link>
-
-            {/* JEWELLERY */}
-            <Link
-              to={`/shop?category=${encodeURIComponent(
-                JEWELLERY_CATEGORY
-              )}`}
-              className={`px-3 py-2 text-sm font-medium transition-colors ${
-                isJewelleryView
-                  ? "text-brand-700 border-b-2 border-brand-700"
-                  : "text-zinc-500 hover:text-zinc-900"
-              }`}
-            >
-              Jewellery
             </Link>
 
             {/* =================================================
@@ -462,12 +441,22 @@ export default function Navbar() {
             ) : null}
           </div>
 
-          {/* ================= MOBILE HAMBURGER ================= */}
-          <button
-            className="hamburger xl:hidden"
-            onClick={toggleMobileMenu}
-            aria-label="Toggle menu"
-          >
+          <div className="flex items-center gap-1 xl:hidden">
+            <Link
+              to="/cart"
+              className="relative flex h-12 min-w-12 items-center justify-center rounded-full text-stone-900 transition-colors hover:bg-stone-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700"
+              aria-label={`Open cart${cartCount ? `, ${cartCount} items` : ""}`}
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13 5.4 5M7 13l-1.1 2.2A1 1 0 0 0 6.8 17H19M9 21a1 1 0 1 0 0-2 1 1 0 0 0 0 2Zm10 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" />
+              </svg>
+              {cartCount > 0 && <span className="absolute right-0 top-0 min-w-[18px] rounded-full bg-brand-600 px-1 py-0.5 text-[10px] font-bold text-white">{cartCount}</span>}
+            </Link>
+            <button
+              className="hamburger"
+              onClick={toggleMobileMenu}
+              aria-label="Toggle menu"
+            >
             <span
               className={`hamburger-line ${
                 isMobileOpen
@@ -491,7 +480,8 @@ export default function Navbar() {
                   : "w-5"
               }`}
             />
-          </button>
+            </button>
+          </div>
 
         </div>
       </nav>
@@ -657,33 +647,6 @@ export default function Navbar() {
                   >
                     <span className="flex-1">
                       Shop Collection
-                    </span>
-
-                    <svg
-                      className="h-5 w-5 text-zinc-300"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 5l7 7-7 7"
-                      />
-                    </svg>
-                  </Link>
-
-                  {/* JEWELLERY */}
-                  <Link
-                    to={`/shop?category=${encodeURIComponent(
-                      JEWELLERY_CATEGORY
-                    )}`}
-                    className="nav-link"
-                    onClick={closeMobileMenu}
-                  >
-                    <span className="flex-1">
-                      Imitation Jewellery
                     </span>
 
                     <svg
