@@ -1,32 +1,36 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import AdminNavbar from "./components/AdminNavbar";
-import HomePage from "./pages/HomePage";
-import AboutPage from "./pages/AboutPage";
-import ShopPage from "./pages/ShopPage";
-import CategoriesPage from "./pages/CategoriesPage";
-import ProductPage from "./pages/ProductPage";
-import CartPage from "./pages/CartPage";
-import AdminDashboard from "./pages/AdminDashboard";
-import WishlistPage from "./pages/WishlistPage";
-import LoginPage from "./pages/LoginPage";
-import UserLoginPage from "./pages/UserLoginPage";
 import ProtectedRoute from "./components/ProtectedRoute";
-import CheckoutPage from "./pages/CheckoutPage";
-import OrderResultPage from "./pages/OrderResultPage";
-import OrderTrackingPage from "./pages/OrderTrackingPage";
-import ProductManagementPage from "./pages/ProductManagementPage";
-import AddProductPage from "./pages/AddProductPage";
-import AdminOrdersPage from "./pages/AdminOrdersPage";
-import AdminStoriesPage from "./pages/AdminStoriesPage";
 import BusinessFooter from "./components/BusinessFooter";
-import InfoPage from "./pages/InfoPage";
 import ToastViewport from "./components/ToastViewport";
-import ProductDetails from "./pages/ProductDetails";
-import PolicyManagementPage from "./pages/PolicyManagementPage";
 import { useAuth } from "./context/AuthContext";
-import OrderHistoryPage from "./pages/OrderHistoryPage";
+
+// Load page code only when its route is opened. Shared navigation, auth, and
+// notification UI stays immediately available while storefront/admin pages no
+// longer inflate the initial JavaScript download.
+const HomePage = lazy(() => import("./pages/HomePage"));
+const AboutPage = lazy(() => import("./pages/AboutPage"));
+const ShopPage = lazy(() => import("./pages/ShopPage"));
+const CategoriesPage = lazy(() => import("./pages/CategoriesPage"));
+const ProductPage = lazy(() => import("./pages/ProductPage"));
+const CartPage = lazy(() => import("./pages/CartPage"));
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const WishlistPage = lazy(() => import("./pages/WishlistPage"));
+const LoginPage = lazy(() => import("./pages/LoginPage"));
+const UserLoginPage = lazy(() => import("./pages/UserLoginPage"));
+const CheckoutPage = lazy(() => import("./pages/CheckoutPage"));
+const OrderResultPage = lazy(() => import("./pages/OrderResultPage"));
+const OrderTrackingPage = lazy(() => import("./pages/OrderTrackingPage"));
+const ProductManagementPage = lazy(() => import("./pages/ProductManagementPage"));
+const AddProductPage = lazy(() => import("./pages/AddProductPage"));
+const AdminOrdersPage = lazy(() => import("./pages/AdminOrdersPage"));
+const AdminStoriesPage = lazy(() => import("./pages/AdminStoriesPage"));
+const InfoPage = lazy(() => import("./pages/InfoPage"));
+const ProductDetails = lazy(() => import("./pages/ProductDetails"));
+const PolicyManagementPage = lazy(() => import("./pages/PolicyManagementPage"));
+const OrderHistoryPage = lazy(() => import("./pages/OrderHistoryPage"));
 
 function ScrollToTop() {
   const { pathname, search } = useLocation();
@@ -57,7 +61,8 @@ function AppRoutes() {
       {showAdminChrome ? <AdminNavbar /> : <Navbar />}
       <ToastViewport />
       <main className="pt-16 overflow-x-hidden min-h-screen bg-[#fffdf9]">
-        <Routes>
+        <Suspense fallback={<div className="p-8 text-center text-stone-500">Loading page...</div>}>
+          <Routes>
           <Route path="/" element={<EntryRoute />} />
           <Route path="/home" element={<HomePage />} />
           <Route path="/about" element={<AboutPage />} />
@@ -98,7 +103,8 @@ function AppRoutes() {
             path="/saree/:code"
             element={<ProductDetails />}
           />
-        </Routes>
+          </Routes>
+        </Suspense>
         {!showAdminChrome && <BusinessFooter />}
       </main>
     </>
