@@ -81,6 +81,10 @@ const orderSchema = new mongoose.Schema(
     subtotal: { type: Number, required: true, min: 0 },
     shippingFee: { type: Number, required: true, min: 0, default: 0 },
     discountAmount: { type: Number, required: true, min: 0, default: 0 },
+    coupon: {
+      code: { type: String, default: "" },
+      discountAmount: { type: Number, min: 0, default: 0 }
+    },
     totalAmount: { type: Number, required: true, min: 0 },
     invoiceNumber: String,
     transactionId: String,

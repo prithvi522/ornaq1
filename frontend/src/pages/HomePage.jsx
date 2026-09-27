@@ -5,6 +5,8 @@ import ProductCard from "../components/ProductCard";
 import ProductModal from "../components/ProductModal";
 import SearchBar from "../components/SearchBar";
 import api from "../services/api";
+import { FaWhatsapp } from "react-icons/fa";
+import { businessProfile } from "../utils/businessProfile";
 
 import heroBanner from "../assets/hero-banner.png";
 import logoGold from "../assets/logo-gold.jpeg";
@@ -68,6 +70,7 @@ export default function HomePage() {
 
   return (
     <div className="home-page min-h-screen bg-[#fffdf9]">
+      <a href={businessProfile.socials.whatsapp} target="_blank" rel="noreferrer" aria-label="Contact ORNAQ on WhatsApp" className="fixed bottom-6 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-3xl text-white shadow-xl transition-transform hover:scale-105 sm:bottom-8 sm:right-8"><FaWhatsapp /></a>
       <div className="home-animated-bg" aria-hidden="true" />
       {/* Hero Section - High Impact */}
       <section className="relative h-[90vh] w-full overflow-hidden sm:h-[85vh] lg:h-[94vh]">

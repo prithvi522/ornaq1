@@ -1,11 +1,18 @@
 import { Link } from "react-router-dom";
 import { useStore } from "../context/StoreContext";
 import { formatCurrency, getOfferPrice, getProductImage } from "../utils/catalog";
+import CouponEntry from "../components/CouponEntry";
+import { useState } from "react";
+import { FaWhatsapp } from "react-icons/fa";
+import { businessProfile } from "../utils/businessProfile";
 
 export default function CartPage() {
   const { cart, cartSummary, removeFromCart, updateCartQuantity } = useStore();
   const shipping = 0;
-  const total = cartSummary.subtotal + shipping;
+  const [coupon, setCoupon] = useState(null);
+  const discount = coupon?.discountAmount || 0;
+  const total = cartSummary.subtotal + shipping - discount;
+  const whatsappOrderUrl = `${businessProfile.socials.whatsapp}?text=${encodeURIComponent(`Hello ORNAQ, I would like to order: ${cart.map((item) => `${item.name} x ${item.qty}`).join(", ")}`)}`;
 
   return (
     <div className="min-h-screen bg-[#fffdf9] pb-20">
@@ -106,6 +113,8 @@ export default function CartPage() {
                   <span className="text-2xl font-black text-brand-700">{formatCurrency(total)}</span>
                 </div>
               </div>
+              <CouponEntry subtotal={cartSummary.subtotal} onChange={setCoupon} />
+              {discount > 0 && <div className="mt-4 flex justify-between text-sm font-bold text-emerald-700"><span>Discount ({coupon.code})</span><span>-{formatCurrency(discount)}</span></div>}
 
               <div className="mt-6 rounded-2xl bg-brand-50 p-4">
                 <p className="text-xs font-bold leading-relaxed text-brand-800">FREE SHIPPING ALL OVER INDIA.</p>
@@ -117,6 +126,7 @@ export default function CartPage() {
               >
                 Checkout Securely
               </Link>
+              {cart.length > 0 && <a href={whatsappOrderUrl} target="_blank" rel="noreferrer" className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-[#25D366] py-3 text-sm font-bold text-[#168b43] hover:bg-emerald-50"><FaWhatsapp className="text-lg" />Order on WhatsApp</a>}
             </div>
 
             <div className="rounded-[2rem] bg-zinc-900 p-8 text-white">

@@ -15,6 +15,8 @@ import {
 } from "../utils/orderUtils.js";
 import { calculatePopularityScore } from "../utils/productUtils.js";
 import { isServiceablePincode } from "../utils/serviceability.js";
+import Coupon from "../models/Coupon.js";
+import { calculateCoupon } from "./couponController.js";
 
 const STOCK_SENSITIVE_STATUSES = new Set(["CONFIRMED", "SHIPPED", "OUT_FOR_DELIVERY", "DELIVERED"]);
 
@@ -217,7 +219,16 @@ export const createOrder = async (req, res) => {
   }
 
   const shippingFee = getShippingFee(subtotal);
-  const totalAmount = subtotal + shippingFee;
+  let couponData = { code: "", discountAmount: 0 };
+  if (req.body.couponCode) {
+    try {
+      const coupon = await Coupon.findOne({ code: String(req.body.couponCode).trim().toUpperCase() });
+      couponData = calculateCoupon(coupon, subtotal);
+    } catch (error) {
+      return res.status(StatusCodes.BAD_REQUEST).json({ message: error.message });
+    }
+  }
+  const totalAmount = Math.max(0, subtotal + shippingFee - couponData.discountAmount);
 
   const order = new Order({
     userId: req.user?._id,
@@ -226,7 +237,8 @@ export const createOrder = async (req, res) => {
     paymentMethod: normalizedPaymentMethod,
     subtotal,
     shippingFee,
-    discountAmount: 0,
+    discountAmount: couponData.discountAmount,
+    coupon: couponData,
     totalAmount,
     paymentStatus: "PENDING",
     orderStatus: "PENDING",
@@ -250,6 +262,19 @@ export const createOrder = async (req, res) => {
     order.paymentStatus = paymentResult.status;
     order.transactionId = paymentResult.transactionId;
     order.razorpayOrderId = paymentResult.gatewayOrder?.id || order.razorpayOrderId;
+    if (couponData.code) {
+      const limitFilter = { _id: (await Coupon.findOne({ code: couponData.code }).select("_id"))?._id, active: true };
+      if (limitFilter._id) {
+        const now = new Date();
+        Object.assign(limitFilter, { $and: [
+          { $or: [{ startsAt: { $exists: false } }, { startsAt: null }, { startsAt: { $lte: now } }] },
+          { $or: [{ expiresAt: { $exists: false } }, { expiresAt: null }, { expiresAt: { $gte: now } }] },
+          { $or: [{ usageLimit: 0 }, { usageLimit: { $gt: 0 }, $expr: { $lt: ["$usageCount", "$usageLimit"] } }] }
+        ] });
+        const reserved = await Coupon.findOneAndUpdate(limitFilter, { $inc: { usageCount: 1 } }, { new: true });
+        if (!reserved) return res.status(StatusCodes.BAD_REQUEST).json({ message: "This coupon is no longer available. Please try another coupon." });
+      } else return res.status(StatusCodes.BAD_REQUEST).json({ message: "This coupon is no longer available." });
+    }
 if (paymentResult.status === "PENDING") {
   order.orderStatus = "PENDING";
 

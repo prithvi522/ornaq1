@@ -6,6 +6,7 @@ import { useNotification } from "../context/NotificationContext";
 import { useAuth } from "../context/AuthContext";
 import PaymentModal from "../components/PaymentModal";
 import { formatCurrency, getOfferPrice } from "../utils/catalog";
+import CouponEntry, { getStoredCoupon } from "../components/CouponEntry";
 
 const RAZORPAY_CHECKOUT_URL = "https://checkout.razorpay.com/v1/checkout.js";
 
@@ -54,6 +55,7 @@ export default function CheckoutPage() {
   const [processing, setProcessing] = useState(false);
   const [fetchingLocation, setFetchingLocation] = useState(false); // New state for location loader
   const [error, setError] = useState("");
+  const [coupon, setCoupon] = useState(null);
   const [address, setAddress] = useState({
     name: "",
     phone: "",
@@ -73,7 +75,7 @@ export default function CheckoutPage() {
   );
   const subtotal = useMemo(() => checkoutSummary.subtotal, [checkoutSummary]);
   const shippingFee = 0;
-  const totalAmount = subtotal + shippingFee;
+  const totalAmount = subtotal + shippingFee - (coupon?.discountAmount || 0);
   const hasMissingAddressFields = !address.name || !address.phone || !address.line1 || !address.city || !address.state || !address.pincode;
 
   // --- NEW FEATURE: FETCH CURRENT LOCATION ---
@@ -192,7 +194,8 @@ export default function CheckoutPage() {
       const res = await api.post("/orders", {
         paymentMethod: "RAZORPAY",
         items: orderItems,
-        shippingAddress: normalizedAddress
+        shippingAddress: normalizedAddress,
+        couponCode: coupon?.code || getStoredCoupon()
       });
 
       if (paymentMethod === "ONLINE") { 
@@ -413,6 +416,8 @@ export default function CheckoutPage() {
                   {shippingFee === 0 ? "FREE" : formatCurrency(shippingFee)}
                 </span>
               </div>
+              <CouponEntry subtotal={subtotal} onChange={setCoupon} />
+              {coupon?.discountAmount > 0 && <div className="flex justify-between text-sm font-bold text-emerald-700"><span>Discount ({coupon.code})</span><span>-{formatCurrency(coupon.discountAmount)}</span></div>}
               <div className="flex justify-between items-baseline pt-2">
                 <span className="text-lg font-black text-stone-900">Grand Total</span>
                 <span className="text-2xl font-black text-brand-700">{formatCurrency(totalAmount)}</span>

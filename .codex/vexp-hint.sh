@@ -1,6 +1,6 @@
 #!/bin/bash
 # vexp-hint: event-driven orientation hint (UserPromptSubmit). Fails open.
-VEXP_BIN="c:/Users/prith/.vscode/extensions/vexp.vexp-vscode-3.2.4-win32-x64/binaries/vexp-core-win32-x64/vexp-core.exe"
+VEXP_BIN="c:/Users/prith/.vscode/extensions/vexp.vexp-vscode-3.2.5-win32-x64/binaries/vexp-core-win32-x64/vexp-core.exe"
 # An extension upgrade removes the versioned folder above; fall back to the
 # newest installed vexp extension binary. Managed by vexp.
 if [ ! -x "$VEXP_BIN" ]; then

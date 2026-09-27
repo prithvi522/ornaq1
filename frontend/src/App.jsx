@@ -31,6 +31,7 @@ const InfoPage = lazy(() => import("./pages/InfoPage"));
 const ProductDetails = lazy(() => import("./pages/ProductDetails"));
 const PolicyManagementPage = lazy(() => import("./pages/PolicyManagementPage"));
 const OrderHistoryPage = lazy(() => import("./pages/OrderHistoryPage"));
+const AdminCouponsPage = lazy(() => import("./pages/AdminCouponsPage"));
 
 function ScrollToTop() {
   const { pathname, search } = useLocation();
@@ -84,6 +85,7 @@ function AppRoutes() {
           <Route path="/admin/products/add" element={<ProtectedRoute adminOnly><AddProductPage /></ProtectedRoute>} />
           <Route path="/admin/stories" element={<ProtectedRoute adminOnly><AdminStoriesPage /></ProtectedRoute>} />
           <Route path="/admin/orders" element={<ProtectedRoute adminOnly><AdminOrdersPage /></ProtectedRoute>} />
+          <Route path="/admin/coupons" element={<ProtectedRoute adminOnly><AdminCouponsPage /></ProtectedRoute>} />
           <Route path="/admin/policies" element={<ProtectedRoute adminOnly><PolicyManagementPage /></ProtectedRoute>} />
           <Route path="/privacy-policy" element={<InfoPage slug="privacy-policy" />} />
           <Route path="/terms-and-conditions" element={<InfoPage slug="terms-and-conditions" />} />
